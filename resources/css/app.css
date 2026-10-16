@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/livewire/src/Features/SupportPagination/views/*.blade.php';
+@source '../views';
+
+@theme {
+    --font-sans: 'Manrope', 'Noto Sans Armenian', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Cormorant Garamond', 'Noto Serif Armenian', ui-serif, Georgia, serif;
+
+    --color-ink: #0a0c0f;
+    --color-abyss: #10151b;
+    --color-deep: #18212b;
+    --color-steel: #2a3846;
+    --color-fin: #7d93a6;
+    --color-foam: #dfe7ee;
+    --color-bone: #f3efe8;
+    --color-blood: #c2412d;
+}
+
+@layer base {
+    html { scroll-behavior: smooth; }
+    body { background: var(--color-ink); }
+    h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+    [x-cloak] { display: none !important; }
+    ::selection { background: var(--color-foam); color: var(--color-ink); }
+}
+
+@utility container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-wide transition active:scale-[.98] disabled:opacity-50; }
+@utility btn-light { @apply btn bg-bone text-ink hover:bg-white; }
+@utility btn-line { @apply btn border border-foam/25 text-foam hover:border-foam/60 hover:bg-white/5; }
+@utility btn-red { @apply btn bg-blood text-white hover:brightness-110; }
+@utility input { @apply w-full rounded-2xl border border-foam/15 bg-white/5 px-4 py-3 text-sm text-bone outline-none transition placeholder:text-fin/60 focus:border-foam/50 focus:ring-4 focus:ring-foam/10; }
+@utility label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-[.18em] text-fin; }
+@utility chip { @apply inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition whitespace-nowrap; }
+@utility eyebrow { @apply text-[11px] font-bold uppercase tracking-[.32em] text-fin; }
+@utility card { @apply rounded-[1.75rem] border border-foam/10 bg-abyss; }
+
+/* Тонкая линия под заголовками — отсылка к fine line */
+@utility hairline { @apply h-px w-16 bg-gradient-to-r from-foam/70 to-transparent; }
+
+.grain::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

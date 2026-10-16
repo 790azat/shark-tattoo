@@ -1,0 +1,68 @@
+name: Instagram sync
+
+# Скачивает публикации @_shark__tattoo в репозиторий и пересобирает базу сайта.
+# Запуск вручную (Actions → Instagram sync → Run workflow) и раз в день.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instagram-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install pillow
+
+      - name: Download from Instagram
+        env:
+          IG_SESSIONID: ${{ secrets.IG_SESSIONID }}
+          MAX_MINUTES: '300'
+        run: python scripts/instagram_sync.py
+
+      - name: Upload videos to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -d videos ] && [ -n "$(ls -A videos)" ]; then
+            gh release view instagram-media >/dev/null 2>&1 || gh release create instagram-media --title "Instagram media" --notes "Видео из Instagram для сайта"
+            existing=$(gh release view instagram-media --json assets --jq '.assets[].name')
+            for f in videos/*.mp4; do
+              name=$(basename "$f")
+              echo "$existing" | grep -qx "$name" || gh release upload instagram-media "$f"
+            done
+          fi
+          rm -rf videos
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, gd
+
+      - name: Rebuild seed database
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env && php artisan key:generate
+          rm -f database/seed.sqlite && touch database/seed.sqlite
+          DB_CONNECTION=sqlite DB_DATABASE=$PWD/database/seed.sqlite php artisan migrate --force --seed
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add database/data public/ig database/seed.sqlite
+          git diff --cached --quiet || git commit -m "Instagram sync: $(date -u +%F)"
+          git push
