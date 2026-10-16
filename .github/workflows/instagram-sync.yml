@@ -33,6 +33,15 @@ jobs:
           MAX_MINUTES: '300'
         run: python scripts/instagram_sync.py
 
+      - name: Thumbnails of hidden posts for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidden-posts
+          path: review/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload videos to release
         env:
           GH_TOKEN: ${{ github.token }}

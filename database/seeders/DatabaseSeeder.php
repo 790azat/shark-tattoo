@@ -67,6 +67,7 @@ class DatabaseSeeder extends Seeder
                 'duration' => $post['duration'] ?? null,
                 'taken_at' => $post['taken_at'] ?? null,
                 'is_featured' => $post['featured'] ?? false,
+                'is_visible' => ! ($post['hidden'] ?? false),
                 'sort' => $i,
             ]);
         }

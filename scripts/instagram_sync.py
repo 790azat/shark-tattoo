@@ -19,6 +19,8 @@ DATA = os.path.join(ROOT, 'database/data/instagram.json')
 STATE = os.path.join(ROOT, 'database/data/instagram_state.json')
 PUB = os.path.join(ROOT, 'public')
 VIDEOS = os.path.join(ROOT, 'videos')
+# Миниатюры скрытых постов для ручного просмотра (артефакт workflow, в репозиторий не попадают)
+REVIEW = os.path.join(ROOT, 'review')
 DEADLINE = time.time() + float(os.environ.get('MAX_MINUTES', '300')) * 60
 SESSION = os.environ.get('IG_SESSIONID', '').strip()
 
@@ -96,7 +98,7 @@ def category(kind, caption):
     c = (caption or '').lower()
     if any(w in c for w in PIERCING_WORDS):
         return 'piercing'
-    if any(w in c for w in TATTOO_WORDS) or kind != 'reel':
+    if any(w in c for w in TATTOO_WORDS):
         return 'tattoo'
     return 'life'
 
@@ -115,21 +117,39 @@ def dump(path, data):
         f.write('\n')
 
 
-def convert_item(it):
+def save_review_thumb(it):
+    img = best((it.get('image_versions2') or {}).get('candidates') or (((it.get('carousel_media') or [{}])[0]).get('image_versions2') or {}).get('candidates') or [])
+    raw = fetch(img, {'User-Agent': UA}, tries=2) if img else None
+    if raw:
+        os.makedirs(REVIEW, exist_ok=True)
+        im = Image.open(io.BytesIO(raw)).convert('RGB')
+        im.thumbnail((240, 480))
+        im.save(os.path.join(REVIEW, it['code'] + '.jpg'), 'JPEG', quality=70)
+
+
+def convert_item(it, prev=None):
+    """Личные посты (без слов про тату/пирсинг) скрыты и их медиа не скачиваются.
+    Ручные пометки hidden/category/featured из прошлой версии сохраняются."""
+    prev = prev or {}
     sc = it['code']
     mt = it.get('media_type')
     kind = 'carousel' if mt == 8 else ('reel' if mt == 2 else 'photo')
     caption = (it.get('caption') or {}).get('text') or ''
+    cat = prev.get('category') or category(kind, caption)
+    hidden = prev['hidden'] if 'hidden' in prev else cat == 'life'
     images, video = [], None
-    for i, m in enumerate(it.get('carousel_media') or [it]):
-        img = best((m.get('image_versions2') or {}).get('candidates') or [])
-        if img:
-            p = save_image(img, f'ig/p/{sc}_{i}.webp')
-            if p:
-                images.append(p)
-        vid = best(m.get('video_versions') or [])
-        if vid and i == 0 and kind == 'reel':
-            video = save_video(vid, f'{sc}.mp4')
+    if hidden:
+        save_review_thumb(it)
+    else:
+        for i, m in enumerate(it.get('carousel_media') or [it]):
+            img = best((m.get('image_versions2') or {}).get('candidates') or [])
+            if img:
+                p = save_image(img, f'ig/p/{sc}_{i}.webp')
+                if p:
+                    images.append(p)
+            vid = best(m.get('video_versions') or [])
+            if vid and i == 0 and kind == 'reel':
+                video = save_video(vid, f'{sc}.mp4')
     return {
         'kind': kind,
         'shortcode': sc,
@@ -142,7 +162,9 @@ def convert_item(it):
         'cover': images[0] if images else None,
         'images': images if kind == 'carousel' else None,
         'video': video,
-        'category': category(kind, caption),
+        'category': cat,
+        'hidden': hidden,
+        'featured': prev.get('featured', False),
         'pinned': bool(it.get('timeline_pinned_user_ids')),
     }
 
@@ -189,10 +211,11 @@ def main():
                 break
             known = 0
             for it in d.get('items', []):
-                if it['code'] in by_code and (by_code[it['code']].get('cover') or '').startswith('/ig/p/'):
+                prev = by_code.get(it['code'])
+                if prev and (prev.get('hidden') or (prev.get('cover') or '').startswith('/ig/p/')):
                     known += 1
                     continue
-                by_code[it['code']] = convert_item(it)
+                by_code[it['code']] = convert_item(it, prev)
             data['posts'] = sorted(by_code.values(), key=lambda p: p['taken_at'], reverse=True)
             dump(DATA, data)
             log('posts', len(data['posts']))
