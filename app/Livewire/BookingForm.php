@@ -23,8 +23,16 @@ class BookingForm extends Component
 
     public bool $sent = false;
 
+    public string $lang = 'hy';
+
+    public function boot(): void
+    {
+        app()->setLocale($this->lang);
+    }
+
     public function submit(): void
     {
+        app()->setLocale($this->lang);
         $data = $this->validate([
             'name' => 'required|string|max:80',
             'contact' => 'required|string|max:120',
@@ -33,13 +41,13 @@ class BookingForm extends Component
             'size' => 'nullable|string|max:40',
             'idea' => 'nullable|string|max:2000',
         ], [], [
-            'name' => 'имя',
-            'contact' => 'телефон, Telegram или Instagram',
+            'name' => __('Имя'),
+            'contact' => __('Телефон / Telegram / Instagram'),
         ]);
 
         $key = 'booking:'.request()->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('contact', 'Слишком много заявок подряд. Напишите нам в Telegram или Instagram.');
+            $this->addError('contact', __('Слишком много заявок подряд. Напишите нам в Telegram или Instagram.'));
 
             return;
         }
@@ -50,6 +58,7 @@ class BookingForm extends Component
         Telegram::notify(implode("\n", array_filter([
             '🦈 Новая заявка #'.$booking->id,
             Booking::SERVICES[$booking->service] ?? $booking->service,
+            'Язык: '.$this->lang,
             'Имя: '.$booking->name,
             'Контакт: '.$booking->contact,
             $booking->placement ? 'Место: '.$booking->placement : null,
@@ -63,6 +72,8 @@ class BookingForm extends Component
 
     public function render()
     {
+        app()->setLocale($this->lang);
+
         return view('livewire.booking-form');
     }
 }

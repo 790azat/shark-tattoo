@@ -15,6 +15,14 @@ class Home extends Component
 
     public int $limit = 12;
 
+    /** Язык страницы: hy (по умолчанию), ru, en. */
+    public string $lang = 'hy';
+
+    public function mount(?string $lang = null): void
+    {
+        $this->lang = in_array($lang, config('studio.locales'), true) ? $lang : config('studio.default_locale');
+    }
+
     public function setFilter(string $filter): void
     {
         $this->filter = array_key_exists($filter, Post::CATEGORIES) ? $filter : 'all';
@@ -28,6 +36,7 @@ class Home extends Component
 
     public function render()
     {
+        app()->setLocale($this->lang);
         $query = Post::visible()->when($this->filter !== 'all', fn ($q) => $q->where('category', $this->filter));
         $counts = Post::visible()->selectRaw('category, count(*) as c')->groupBy('category')->pluck('c', 'category');
 
@@ -37,6 +46,8 @@ class Home extends Component
             'counts' => $counts,
             'highlights' => Highlight::where('is_visible', true)->orderBy('sort')->get(),
             's' => fn (string $k, $d = null) => Setting::get($k, $d),
-        ])->title(Setting::get('name', 'Shark Tattoo').' — fine line тату в Ереване');
+            // Текст из настроек на текущем языке (about_en, tagline_hy…), иначе русский вариант
+            't' => fn (string $k, $d = null) => Setting::get($k.'_'.$this->lang) ?: Setting::get($k, $d),
+        ])->title(Setting::get('name', 'Shark Tattoo').' — '.__('Fine line тату в Ереване'));
     }
 }

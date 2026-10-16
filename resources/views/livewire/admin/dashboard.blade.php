@@ -224,10 +224,10 @@
                 <form wire:submit="saveSettings" class="card space-y-4 p-6">
                     <div class="grid gap-4 md:grid-cols-2">
                         @foreach (\App\Livewire\Admin\Dashboard::SETTING_FIELDS as $key => $label)
-                            <div @class(['md:col-span-2' => in_array($key, ['bio', 'about', 'tagline'])])>
+                            <div @class(['md:col-span-2' => in_array($key, ['bio', 'about', 'about_hy', 'about_en'])])>
                                 <label class="label">{{ $label }}</label>
-                                @if (in_array($key, ['bio', 'about']))
-                                    <textarea wire:model="settings.{{ $key }}" rows="{{ $key === 'about' ? 6 : 4 }}" class="input"></textarea>
+                                @if (in_array($key, ['bio', 'about', 'about_hy', 'about_en']))
+                                    <textarea wire:model="settings.{{ $key }}" rows="{{ $key === 'bio' ? 4 : 6 }}" class="input"></textarea>
                                 @else
                                     <input wire:model="settings.{{ $key }}" class="input">
                                 @endif
